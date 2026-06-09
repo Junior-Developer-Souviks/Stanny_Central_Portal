@@ -488,7 +488,6 @@ class OrderNew extends Component
             if (in_array('ladies_jacket_suit',$extra) || in_array('shirt',$extra) || in_array('mens_jacket_suit',$extra)) {
                 $rules["items.$index.client_name_required"] = 'required';
                 $rules["items.$index.client_name_place"] = 'required_if:items.'.$index.'.client_name_required,Yes';
-                $rules["items.$index.client_name_options"] = 'required_if:items.'.$index.'.client_name_required,Yes';
             }
         }
 
@@ -1047,7 +1046,6 @@ class OrderNew extends Component
             'items.*.cuff_style.required_if'=> 'Please specify the cuff style.',
             'items.*.client_name_required.required' => 'Please specify if client name is required on the item.',
             'items.*.client_name_place.required_if' => 'Please specify where the client name should be placed on the item.',
-            'items.*.client_name_options.required_if' => 'Please specify where the client name options be placed on the item.',
         ];
     }
 
@@ -1469,7 +1467,7 @@ class OrderNew extends Component
                 $extraFields = [
                     // Men/Ladies Jacket
                     'vents', 'vents_required', 'vents_count',
-                    'client_name_required', 'client_name_place','client_name_options',
+                    'client_name_required', 'client_name_place',
                     'shoulder_type',
     
                     // Trouser
@@ -2184,10 +2182,8 @@ protected function fillMatchingMeasurements($currentIndex, $sourceIndex)
                         $orderItem->client_name_required = $item['client_name_required'] ?? null;
                         if ($orderItem->client_name_required=="Yes") {
                             $orderItem->client_name_place = $item['client_name_place'] ?? null;
-                            $orderItem->client_name_options = $item['client_name_options'] ?? null;
                         }else{
                             $orderItem->client_name_place = null;
-                            $orderItem->client_name_options = null;
                         }
                     }
                 }

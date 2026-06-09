@@ -12,6 +12,7 @@ use App\Models\InvoicePayment;
 use App\Models\Ledger;
 use App\Models\Journal;
 use App\Models\Payment;
+use App\Models\Designation;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithPagination;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,15 +31,27 @@ class PaymentCollectionIndex extends Component
     public $auth;
     protected $listeners = ['revoke-payment-confirmed' => 'revokePayment'];
     protected $paginationTheme = 'bootstrap';
-
+    public $canApprove = false;
+    
      public function updatingSearch()
     {
         $this->resetPage();
     }
+    
     public function mount(){
         $this->auth = Auth::guard('admin')->user();
+        $isAuthorizedViewer = $this->auth->is_super_admin || ($this->auth->designation == 14);
+          // Check approve permission via Designation → designation_permissions → permissions
+        $this->canApprove = $this->auth->is_super_admin || Designation::where('id', $this->auth->designation)
+            ->whereHas('permissions', function($query) {
+                $query->where('route', 'admin.accounting.payment_receipt_detail');
+            })
+            ->exists();
         $this->staffs = User::where('user_type', 0)
-        ->when(!$this->auth->is_super_admin, fn($query) => $query->where('id', $this->auth->id))// Auth-wise filtering
+        // ->when(!$isAuthorizedViewer, fn($query) => $query->where('id', $this->auth->id))// Auth-wise filtering
+          ->when(!$isAuthorizedViewer, function ($query) {
+            return $query->where('id', $this->auth->id);
+        })
         ->select('name', 'id')
         ->orderBy('name', 'ASC')
         ->get();
@@ -49,13 +62,21 @@ class PaymentCollectionIndex extends Component
         $paginate = 20;
         $customer_id = $this->selected_customer_id;
         $staff_id = $this->staff_id;
+        // Determine if user can see all data
+        $isAuthorizedViewer = $this->auth->is_super_admin || ($this->auth->designation == 14);
 
         // Query with conditions
-        $query = PaymentCollection::with(['customer', 'user'])
-            ->when(!empty($customer_id), fn($query) => $query->where('customer_id', $customer_id))
-            ->when(!empty($staff_id), fn($query) => $query->where('user_id', $staff_id))
-            ->when(!$this->auth->is_super_admin, fn($query) => $query->where('user_id', $this->auth->id)) // Auth-wise data filtering
-            ->where('collection_amount','>',0)
+         $query = PaymentCollection::with(['customer', 'user'])
+            ->when(!empty($customer_id), function ($query) use ($customer_id) {
+                return $query->where('customer_id', $customer_id);
+            })
+            ->when(!empty($staff_id), function ($query) use ($staff_id) {
+                return $query->where('user_id', $staff_id);
+            })
+            ->when(!$isAuthorizedViewer, function ($query) {
+                return $query->where('user_id', $this->auth->id);
+            })
+            ->where('collection_amount', '>', 0)
             ->orderBy('cheque_date', 'desc');
 
         // Set total count
@@ -87,8 +108,9 @@ class PaymentCollectionIndex extends Component
         $this->resetPage();
     }
 
-    public function customerDetails($id){
-        $this->active_details = $id;
+    public function customerDetails($id)
+    {
+        $this->active_details = ($this->active_details == $id) ? '' : $id;
     }
 
     public function revokePayment($id){

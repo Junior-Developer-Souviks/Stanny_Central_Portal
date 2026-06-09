@@ -24,9 +24,10 @@
             <div class="col-auto">
                 <div class="d-flex align-items-center gap-2">
                     @php
-                    $user = Auth::guard('admin')->user();
+                        $user = Auth::guard('admin')->user();
+                        $isAuthorized = $user && ($user->is_super_admin == 1 || in_array($user->designation, [1, 14]));
                     @endphp
-                    @if ($user && $user->is_super_admin == 1)
+                    @if ($isAuthorized)
                     <div class="mb-4">
                         <label for="searchStaff" class="form-label mb-0">Branch</label>
                         <div class="d-flex gap-2">

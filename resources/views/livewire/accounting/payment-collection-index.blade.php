@@ -122,11 +122,9 @@
 
                                             @endif
                                         </td>
-                                        @php
-                                          $userDesignationId = auth()->guard('admin')->user()->designation;
-                                        @endphp
+                                       
                                         <td>
-                                            @if (empty($payment->is_ledger_added) && $userDesignationId == 1)
+                                            @if (empty($payment->is_ledger_added) && $canApprove)
                                                 <a href="{{ route('admin.accounting.payment_receipt_detail',$payment->id) }}" class="btn btn-md btn-warning select-md btn_outline">Approve</a>
                                             @endif
 

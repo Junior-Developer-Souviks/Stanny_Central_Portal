@@ -110,7 +110,35 @@ class OrderEdit extends Component
         }
     }
     
-   
+   /*  public function FindCustomer($term)
+    {
+        // $this->searchTerm = $term;
+        $this->reset('searchResults');
+
+        if (!empty($term)) {
+            // Fetch users based on search term
+            $users = User::where('user_type', 1)
+                ->where('status', 1)
+                ->where(function ($query) use ($term) {
+                    $query->where('name', 'like', '%' . $term . '%')
+                        ->orWhere('phone', 'like', '%' . $term . '%')
+                        // ->orWhere('whatsapp_no', 'like', '%' . $this->searchTerm . '%')
+                        ->orWhere('email', 'like', '%' . $term . '%');
+                })
+                ->take(20)
+                ->get();
+
+           
+
+            // Remove duplicate users by `id`
+            $this->searchResults = $users->unique('id')->values();
+        } else {
+            // Reset results when the search term is empty
+            $this->reset([
+                'searchResults','orders','prefix','phone_code','selectedCountryWhatsapp','alt_phone_code_1','alt_phone_code_2','isWhatsappPhone', 'isWhatsappAlt1', 'isWhatsappAlt2'
+            ]);
+        }
+    } */
     
      public function FindCustomer($term)
     {
@@ -410,7 +438,6 @@ class OrderEdit extends Component
                     'cuff_style'   => $item->cuff_style,
                     'client_name_required' => $item->client_name_required,
                     'client_name_place'   => $item->client_name_place,
-                    'client_name_options'   => $item->client_name_options,
                 ];
             })->toArray();
 
@@ -889,7 +916,7 @@ class OrderEdit extends Component
     // }
     
     public function rules()
-    {
+{
     $auth = Auth::guard('admin')->user();
     $hasGarment = collect($this->items)->contains('selected_collection',1);
     $hasOldImage = !empty($this->old_customer_image);
@@ -979,7 +1006,6 @@ class OrderEdit extends Component
         if (in_array('ladies_jacket_suit', $extra) || in_array('shirt', $extra) || in_array('mens_jacket_suit', $extra)) {
             $rules["items.$index.client_name_required"] = 'required';
             $rules["items.$index.client_name_place"] = 'required_if:items.'.$index.'.client_name_required,Yes';
-            $rules["items.$index.client_name_options"] = 'required_if:items.'.$index.'.client_name_required,Yes';
         }
     }
 
@@ -1033,7 +1059,6 @@ class OrderEdit extends Component
             'items.*.cuff_style.required_if'=> 'Please specify the cuff style.',
             'items.*.client_name_required.required' => 'Please specify if client name is required on the item.',
             'items.*.client_name_place.required_if' => 'Please specify where the client name should be placed on the item.',
-            'items.*.client_name_options.required_if' => 'Please specify where the client options should be placed on the item.',
         ];
     }
      public function updated($propertyName)
@@ -1278,7 +1303,7 @@ class OrderEdit extends Component
                 $extraFields = [
                     // Men/Ladies Jacket
                     'vents', 'vents_required', 'vents_count',
-                    'client_name_required', 'client_name_place','client_name_options',
+                    'client_name_required', 'client_name_place',
                     'shoulder_type','mens_hand_stitching','ladies_hand_stitching',
     
                     // Trouser
@@ -2016,8 +2041,8 @@ protected function resetMeasurements($index)
                 $order->last_payment_date = now();
                 // $order->created_by = auth()->guard('admin')->user()->id;
                 $loggedInAdmin = auth()->guard('admin')->user();
-                // if ($order->team_lead_id === null || $loggedInAdmin->designation != 4) {
-                // $order->team_lead_id = $loggedInAdmin->parent_id ?? null;
+                //  if ($order->team_lead_id === null || $loggedInAdmin->designation != 4) {
+                //   $order->team_lead_id = $loggedInAdmin->parent_id ?? null;
                 // }
                 $order->save();
             }
@@ -2233,10 +2258,8 @@ protected function resetMeasurements($index)
                             $orderItem->client_name_required = $item['client_name_required'] ?? null;
                             if ($orderItem->client_name_required=="Yes") {
                                 $orderItem->client_name_place = $item['client_name_place'] ?? null;
-                                $orderItem->client_name_options = $item['client_name_options'] ?? null;
                             }else{
                                 $orderItem->client_name_place = null;
-                                $orderItem->client_name_options = null;
                             }
                         }
                     }

@@ -236,260 +236,461 @@ class CashBookModule extends Component
         $this->selectedStaffId = null;
         $this->searchStaff = '';
         $this->staffSuggestions = [];
+        
+        
     }
+    
+    
 
-
-      public function render()
-    {
-        $user = Auth::guard('admin')->user();
-
-        $startDate = Carbon::parse($this->start_date)->startOfDay();
-        $endDate = Carbon::parse($this->end_date)->endOfDay();
-
-        // Get earliest transaction date (start point)
-        $firstCollectionDate = PaymentCollection::where('is_approve', 1)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->orderBy('created_at')
-            ->value('created_at');
-
-        $firstExpenseDate = Journal::where('is_debit', 1)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->whereHas('payment', function ($q) use ($user) {
-                    $q->where('stuff_id', $user->id);
-                });
-            })
-            ->orderBy('created_at')
-            ->value('created_at');
-
-        // Opening Balance (Past Collections)
-        $pastCollections = PaymentCollection::where('is_approve', 1)
-            ->whereDate('created_at', '<', $this->start_date)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id); // Staff's collections
-            })
-            ->sum('collection_amount');
-
-        // Opening Balance (Past Expenses)
-        $pastExpenses = Journal::where('is_debit', 1)
-            ->whereDate('created_at', '<', $this->start_date)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->whereHas('payment', function ($q) use ($user) {
-                    $q->whereNotNull('stuff_id')->where('stuff_id', $user->id); // Staff's expenses
-                });
-            })
-            ->sum('transaction_amount');
-
-        $openingBalance = $pastCollections - $pastExpenses;
-            
-        // Today's Collections
-        $collectionQuery = PaymentCollection::where('is_approve', 1)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-            )
-
-            ->where(function ($query) {
-        $query->where('payment_type', '!=', 'cheque')  // Include all except 'cheque'
-              ->orWhere(function ($subQuery) {
-                  $subQuery->where('payment_type', 'cheque');
-                        //   ->whereNotNull('credit_date'); // Only include 'cheque' if credit_date is not null
-              });
-    });
-
-        if ($this->start_date && $this->end_date) {
-            $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->totalCollections = $collectionQuery->sum('collection_amount') + $collectionQuery->sum('withdrawal_charge');
-
-        // Cash Collection
-        $collectionQuery = PaymentCollection::where('is_approve', 1)
-            ->where('payment_type','cash')
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-        );
-
-            
-        if ($this->start_date && $this->end_date) {
-            $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->totalcashCollections = $collectionQuery->sum('collection_amount');
+    //   public function render()
+    // {
+    //     $user = Auth::guard('admin')->user();
+    //     $isAuthorized = $user->is_super_admin || $user->designation == 14;
         
-        // NEFT Collection
-         $collectionQuery = PaymentCollection::where('is_approve', 1)
-            ->where('payment_type','neft')
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-        );
+    //     $startDate = Carbon::parse($this->start_date)->startOfDay();
+    //     $endDate = Carbon::parse($this->end_date)->endOfDay();
 
+    //     // Get earliest transaction date (start point)
+    //     $firstCollectionDate = PaymentCollection::where('is_approve', 1)
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->orderBy('created_at')
+    //         ->value('created_at');
 
-        if ($this->start_date && $this->end_date) {
-            $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->totalneftCollections = $collectionQuery->sum('collection_amount');
+    //     $firstExpenseDate = Journal::where('is_debit', 1)
+    //         ->when(!$user->is_super_admin, function ($query) use ($user) {
+    //             $query->whereHas('payment', function ($q) use ($user) {
+    //                 $q->where('stuff_id', $user->id);
+    //             });
+    //         })
+    //         ->orderBy('created_at')
+    //         ->value('created_at');
+
+    //     // Opening Balance (Past Collections)
+    //     $pastCollections = PaymentCollection::where('is_approve', 1)
+    //         ->whereDate('created_at', '<', $this->start_date)
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id); // Staff's collections
+    //         })
+    //         ->sum('collection_amount');
+
+    //     // Opening Balance (Past Expenses)
+    //     $pastExpenses = Journal::where('is_debit', 1)
+    //         ->whereDate('created_at', '<', $this->start_date)
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->whereHas('payment', function ($q) use ($user) {
+    //                 $q->whereNotNull('stuff_id')->where('stuff_id', $user->id); // Staff's expenses
+    //             });
+    //         })
+    //         ->sum('transaction_amount');
+
+    //     $openingBalance = $pastCollections - $pastExpenses;
+            
+    //     // Today's Collections
+    //     $collectionQuery = PaymentCollection::where('is_approve', 1)
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //         )
+
+    //         ->where(function ($query) {
+    //     $query->where('payment_type', '!=', 'cheque')  // Include all except 'cheque'
+    //           ->orWhere(function ($subQuery) {
+    //               $subQuery->where('payment_type', 'cheque');
+    //                     //   ->whereNotNull('credit_date'); // Only include 'cheque' if credit_date is not null
+    //           });
+    // });
+
+    //     if ($this->start_date && $this->end_date) {
+    //         $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->totalCollections = $collectionQuery->sum('collection_amount') + $collectionQuery->sum('withdrawal_charge');
+
+    //     // Cash Collection
+    //     $collectionQuery = PaymentCollection::where('is_approve', 1)
+    //         ->where('payment_type','cash')
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //     );
+
+            
+    //     if ($this->start_date && $this->end_date) {
+    //         $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->totalcashCollections = $collectionQuery->sum('collection_amount');
         
-        // Digital Collection
-        $collectionQuery = PaymentCollection::where('is_approve', 1)
-            ->where('payment_type','digital_payment')
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-        );
+    //     // NEFT Collection
+    //      $collectionQuery = PaymentCollection::where('is_approve', 1)
+    //         ->where('payment_type','neft')
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //     );
 
 
-        if ($this->start_date && $this->end_date) {
-            $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->totaldigitalCollections = $collectionQuery->sum('collection_amount') + $collectionQuery->sum('withdrawal_charge');
+    //     if ($this->start_date && $this->end_date) {
+    //         $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->totalneftCollections = $collectionQuery->sum('collection_amount');
+        
+    //     // Digital Collection
+    //     $collectionQuery = PaymentCollection::where('is_approve', 1)
+    //         ->where('payment_type','digital_payment')
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //     );
 
-        // Cheque Collection
-         $collectionQuery = PaymentCollection::where('is_approve', 1)
-            ->where('payment_type','cheque')
-            // ->whereNotNull('credit_date')
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-        );
+
+    //     if ($this->start_date && $this->end_date) {
+    //         $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->totaldigitalCollections = $collectionQuery->sum('collection_amount') + $collectionQuery->sum('withdrawal_charge');
+
+    //     // Cheque Collection
+    //      $collectionQuery = PaymentCollection::where('is_approve', 1)
+    //         ->where('payment_type','cheque')
+    //         // ->whereNotNull('credit_date')
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //     );
 
 
-        if ($this->start_date && $this->end_date) {
-            $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->totalchequeCollections = $collectionQuery->sum('collection_amount');
+    //     if ($this->start_date && $this->end_date) {
+    //         $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->totalchequeCollections = $collectionQuery->sum('collection_amount');
       
 
-        //Total Expense 
-        $expenseQuery = Journal::where('is_debit', 1)
-            ->whereNotNull('payment_id') 
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->whereHas('payment', function ($q) use ($user) {
-                    $q->whereNotNull('stuff_id')->where('stuff_id', $user->id);
-                });
-            })
-             ->when($this->selectedStaffId, function ($query) {
-                $query->whereHas('payment', fn($q) => $q->where('stuff_id', $this->selectedStaffId));
-            });
+    //     //Total Expense 
+    //     $expenseQuery = Journal::where('is_debit', 1)
+    //         ->whereNotNull('payment_id') 
+    //         ->when(!$isAuthorized, function ($query) use ($user) {
+    //             $query->whereHas('payment', function ($q) use ($user) {
+    //                 $q->whereNotNull('stuff_id')->where('stuff_id', $user->id);
+    //             });
+    //         })
+    //          ->when($this->selectedStaffId, function ($query) {
+    //             $query->whereHas('payment', fn($q) => $q->where('stuff_id', $this->selectedStaffId));
+    //         });
             
 
 
-        if ($this->start_date && $this->end_date) {
-            $expenseQuery->whereBetween('entry_date', [$startDate, $endDate]);
-        }
+    //     if ($this->start_date && $this->end_date) {
+    //         $expenseQuery->whereBetween('entry_date', [$startDate, $endDate]);
+    //     }
 
-        $this->totalExpenses = $expenseQuery->sum('transaction_amount');
+    //     $this->totalExpenses = $expenseQuery->sum('transaction_amount');
 
     
        
 
-        $collectedFromStaff = DayCashEntry::where('type', 'collected')
-            ->whereDate('payment_date', '>=', $firstCollectionDate ?? $this->start_date)
-            ->whereDate('payment_date', '<=', $this->end_date)
-            ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('staff', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-            )
+    //     $collectedFromStaff = DayCashEntry::where('type', 'collected')
+    //         ->whereDate('payment_date', '>=', $firstCollectionDate ?? $this->start_date)
+    //         ->whereDate('payment_date', '<=', $this->end_date)
+    //         ->when(!$isAuthorized, fn($q) => $q->where('staff_id', $user->id))
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('staff', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //         )
 
-            ->when(!$user->is_super_admin, function($q) use ($user) {
-                $q->where('staff_id', $user->id);
-            })
-            ->sum('amount');
+    //         ->when(!$user->is_super_admin, function($q) use ($user) {
+    //             $q->where('staff_id', $user->id);
+    //         })
+    //         ->sum('amount');
             
-        $givenToStaff = DayCashEntry::where('type', 'given')
-            ->whereDate('payment_date', '>=', $firstCollectionDate ?? $this->start_date)
-            ->whereDate('payment_date', '<=', $this->end_date)
-            ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('staff', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-            )
+    //     $givenToStaff = DayCashEntry::where('type', 'given')
+    //         ->whereDate('payment_date', '>=', $firstCollectionDate ?? $this->start_date)
+    //         ->whereDate('payment_date', '<=', $this->end_date)
+    //          ->when(!$isAuthorized, fn($q) => $q->where('staff_id', $user->id))
+    //         ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('staff', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //         )
 
-            ->when(!$user->is_super_admin, function($q) use ($user) {
-                $q->where('staff_id', $user->id);
-            })
-            ->sum('amount');
-        // Final Wallet
-        $this->totalWallet = $openingBalance + ($this->totalCollections - $this->totalExpenses - $collectedFromStaff + $givenToStaff);
+    //         ->when(!$user->is_super_admin, function($q) use ($user) {
+    //             $q->where('staff_id', $user->id);
+    //         })
+    //         ->sum('amount');
+    //     // Final Wallet
+    //     $this->totalWallet = $openingBalance + ($this->totalCollections - $this->totalExpenses - $collectedFromStaff + $givenToStaff);
 
-        // Payment Collections Table
-        $paymentQuery = PaymentCollection::where('is_approve', 1)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->when($this->selectedStaffId, function($query){
-                $query->where('user_id', $this->selectedStaffId);
-            })
-            ->when($this->staff_branch, fn($q) =>
-                $q->whereHas('user', fn($u) =>
-                    $u->where('branch_id', $this->staff_branch)
-                )
-            )
+    //     // Payment Collections Table
+    //     $paymentQuery = PaymentCollection::where('is_approve', 1)
+    //      ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+    //         ->when(!$user->is_super_admin, function ($query) use ($user) {
+    //             $query->where('user_id', $user->id);
+    //         })
+    //         ->when($this->selectedStaffId, function($query){
+    //             $query->where('user_id', $this->selectedStaffId);
+    //         })
+    //         ->when($this->staff_branch, fn($q) =>
+    //             $q->whereHas('user', fn($u) =>
+    //                 $u->where('branch_id', $this->staff_branch)
+    //             )
+    //         )
 
-            ->where(function ($query) {
-             $query->where('payment_type', '!=', 'cheque')  // Include all except 'cheque'
-              ->orWhere(function ($subQuery) {
-                  $subQuery->where('payment_type', 'cheque');
-                        //   ->whereNotNull('credit_date'); // Only include 'cheque' if credit_date is not null
-              });
-    });
-            ;
+    //         ->where(function ($query) {
+    //          $query->where('payment_type', '!=', 'cheque')  // Include all except 'cheque'
+    //           ->orWhere(function ($subQuery) {
+    //               $subQuery->where('payment_type', 'cheque');
+    //                     //   ->whereNotNull('credit_date'); // Only include 'cheque' if credit_date is not null
+    //           });
+    // });
+    //         ;
 
 
-        if ($this->start_date && $this->end_date) {
-            $paymentQuery->whereBetween('cheque_date', [$startDate, $endDate]);
-        }
-        $this->paymentCollections = $paymentQuery->orderByDesc('created_at')->where('collection_amount','>',0)->get();
+    //     if ($this->start_date && $this->end_date) {
+    //         $paymentQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    //     }
+    //     $this->paymentCollections = $paymentQuery->orderByDesc('created_at')->where('collection_amount','>',0)->get();
         
-        // Expenses Table
-         $validPaymentIds = Journal::whereNotNull('payment_id')->pluck('payment_id');
-        $paymentExpenseQuery = Payment::where('payment_for', 'debit')
-            ->whereIn('id', $validPaymentIds)
-            ->when(!$user->is_super_admin, function ($query) use ($user) {
-                $query->where('stuff_id', $user->id);
-            })
-              ->when($this->selectedStaffId, function($query){
-                $query->where('stuff_id', $this->selectedStaffId);
-            });
+    //     // Expenses Table
+    //      $validPaymentIds = Journal::whereNotNull('payment_id')->pluck('payment_id');
+    //     $paymentExpenseQuery = Payment::where('payment_for', 'debit')
+    //         ->whereIn('id', $validPaymentIds)
+    //          ->when(!$isAuthorized, fn($q) => $q->where('stuff_id', $user->id))
+    //         ->when(!$user->is_super_admin, function ($query) use ($user) {
+    //             $query->where('stuff_id', $user->id);
+    //         })
+    //           ->when($this->selectedStaffId, function($query){
+    //             $query->where('stuff_id', $this->selectedStaffId);
+    //         });
             
 
 
-        if ($this->start_date && $this->end_date) {
-            $paymentExpenseQuery->whereBetween('created_at', [$startDate, $endDate]);
-        }
-        $this->paymentExpenses = $paymentExpenseQuery->orderByDesc('created_at')->get();
+    //     if ($this->start_date && $this->end_date) {
+    //         $paymentExpenseQuery->whereBetween('created_at', [$startDate, $endDate]);
+    //     }
+    //     $this->paymentExpenses = $paymentExpenseQuery->orderByDesc('created_at')->get();
         
-        return view('livewire.accounting.cash-book-module');
+    //     return view('livewire.accounting.cash-book-module');
+    // }
+    
+public function render()
+{
+    $user = Auth::guard('admin')->user();
+    $isAuthorized = $user->is_super_admin || $user->designation == 14;
+
+    $startDate = Carbon::parse($this->start_date)->startOfDay();
+    $endDate   = Carbon::parse($this->end_date)->endOfDay();
+
+    // ─── Opening Balance ───────────────────────────────────────────
+    // API uses cheque_date (not created_at) for past collections
+    $pastCollections = PaymentCollection::where('is_approve', 1)
+        ->whereDate('cheque_date', '<', $this->start_date)   // ← was created_at
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->sum('collection_amount');
+
+    // API uses entry_date (not created_at) for past expenses
+    $pastExpenses = Journal::where('is_debit', 1)
+        ->whereDate('entry_date', '<', $this->start_date)    // ← was created_at
+        ->when(!$isAuthorized, fn($q) =>
+            $q->whereHas('payment', fn($p) =>
+                $p->whereNotNull('stuff_id')->where('stuff_id', $user->id)
+            )
+        )
+        ->when($this->selectedStaffId, fn($q) =>
+            $q->whereHas('payment', fn($p) => $p->where('stuff_id', $this->selectedStaffId))
+        )
+        ->sum('transaction_amount');
+
+    $openingBalance = $pastCollections - $pastExpenses;
+
+    // ─── Total Collections ─────────────────────────────────────────
+    $collectionQuery = PaymentCollection::where('is_approve', 1)
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        )
+        ->where(function ($q) {
+            $q->where('payment_type', '!=', 'cheque')
+              ->orWhere(fn($sq) => $sq->where('payment_type', 'cheque'));
+        });
+
+    if ($this->start_date && $this->end_date) {
+        $collectionQuery->whereBetween('cheque_date', [$startDate, $endDate]);
     }
+    $this->totalCollections = $collectionQuery->sum('collection_amount')
+                            + $collectionQuery->sum('withdrawal_charge');
 
+    // ─── Cash Collection ───────────────────────────────────────────
+    $cashQuery = PaymentCollection::where('is_approve', 1)
+        ->where('payment_type', 'cash')
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        );
+
+    if ($this->start_date && $this->end_date) {
+        $cashQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    }
+    $this->totalcashCollections = $cashQuery->sum('collection_amount');
+
+    // ─── NEFT Collection ───────────────────────────────────────────
+    $neftQuery = PaymentCollection::where('is_approve', 1)
+        ->where('payment_type', 'neft')
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        );
+
+    if ($this->start_date && $this->end_date) {
+        $neftQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    }
+    $this->totalneftCollections = $neftQuery->sum('collection_amount');
+
+    // ─── Digital Collection ────────────────────────────────────────
+    $digitalQuery = PaymentCollection::where('is_approve', 1)
+        ->where('payment_type', 'digital_payment')
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        );
+
+    if ($this->start_date && $this->end_date) {
+        $digitalQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    }
+    $this->totaldigitalCollections = $digitalQuery->sum('collection_amount')
+                                   + $digitalQuery->sum('withdrawal_charge');
+
+    // ─── Cheque Collection ─────────────────────────────────────────
+    $chequeQuery = PaymentCollection::where('is_approve', 1)
+        ->where('payment_type', 'cheque')
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        );
+
+    if ($this->start_date && $this->end_date) {
+        $chequeQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    }
+    $this->totalchequeCollections = $chequeQuery->sum('collection_amount');
+
+    // ─── Total Expenses ────────────────────────────────────────────
+    // API uses entry_date (not created_at) for expense date range
+    $expenseQuery = Journal::where('is_debit', 1)
+        ->whereNotNull('payment_id')
+        ->when(!$isAuthorized, fn($q) =>
+            $q->whereHas('payment', fn($p) =>
+                $p->whereNotNull('stuff_id')->where('stuff_id', $user->id)
+            )
+        )
+        ->when($this->selectedStaffId, fn($q) =>
+            $q->whereHas('payment', fn($p) => $p->where('stuff_id', $this->selectedStaffId))
+        );
+
+    if ($this->start_date && $this->end_date) {
+        $expenseQuery->whereBetween('entry_date', [$startDate, $endDate]); // ← was correct
+    }
+    $this->totalExpenses = $expenseQuery->sum('transaction_amount');
+
+    // ─── Day Cash Entries ──────────────────────────────────────────
+    $firstCollectionDate = PaymentCollection::where('is_approve', 1)
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->orderBy('created_at')
+        ->value('created_at');
+
+    $collectedFromStaff = DayCashEntry::where('type', 'collected')
+        ->whereDate('payment_date', '>=', $firstCollectionDate ?? $startDate)
+        ->whereDate('payment_date', '<=', $endDate)
+        ->when(!$isAuthorized, fn($q) => $q->where('staff_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('staff', fn($u) => $u->where('branch_id', $this->staff_branch))
+        )
+        ->sum('amount');
+
+    $givenToStaff = DayCashEntry::where('type', 'given')
+        ->whereDate('payment_date', '>=', $firstCollectionDate ?? $startDate)
+        ->whereDate('payment_date', '<=', $endDate)
+        ->when(!$isAuthorized, fn($q) => $q->where('staff_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('staff_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('staff', fn($u) => $u->where('branch_id', $this->staff_branch))
+        )
+        ->sum('amount');
+
+    // ─── Wallet ────────────────────────────────────────────────────
+    $this->totalWallet = $openingBalance
+        + $this->totalCollections
+        - $this->totalExpenses
+        - $collectedFromStaff
+        + $givenToStaff;
+
+    // ─── Payment Collections Table ─────────────────────────────────
+    $paymentQuery = PaymentCollection::where('is_approve', 1)
+        ->when(!$isAuthorized, fn($q) => $q->where('user_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('user_id', $this->selectedStaffId))
+        ->when($this->staff_branch, fn($q) =>
+            $q->whereHas('user', fn($u) => $u->where('branch_id', $this->staff_branch))
+        )
+        ->where(function ($q) {
+            $q->where('payment_type', '!=', 'cheque')
+              ->orWhere(fn($sq) => $sq->where('payment_type', 'cheque'));
+        });
+
+    if ($this->start_date && $this->end_date) {
+        $paymentQuery->whereBetween('cheque_date', [$startDate, $endDate]);
+    }
+    $this->paymentCollections = $paymentQuery
+        ->orderByDesc('created_at')
+        ->where('collection_amount', '>', 0)
+        ->get();
+
+    // ─── Expenses Table ────────────────────────────────────────────
+    $validPaymentIds = Journal::whereNotNull('payment_id')->pluck('payment_id');
+
+    $paymentExpenseQuery = Payment::where('payment_for', 'debit')
+        ->whereIn('id', $validPaymentIds)
+        ->when(!$isAuthorized, fn($q) => $q->where('stuff_id', $user->id))
+        ->when($this->selectedStaffId, fn($q) => $q->where('stuff_id', $this->selectedStaffId));
+
+    if ($this->start_date && $this->end_date) {
+        $paymentExpenseQuery->whereBetween('created_at', [$startDate, $endDate]);
+    }
+    $this->paymentExpenses = $paymentExpenseQuery->orderByDesc('created_at')->get();
+
+    return view('livewire.accounting.cash-book-module');
+}
 
 }

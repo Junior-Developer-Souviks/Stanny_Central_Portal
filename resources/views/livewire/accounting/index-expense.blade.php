@@ -3,13 +3,14 @@
     <!-- Navbar -->
     <!-- End Navbar -->
     <!-- <div class="container-fluid py-4"> -->
-    <style>
-        /* Hide details by default */
-        .store_details_column {
-            display: none;
-        }
-    </style>
+    
     <div class="container">
+        <style>
+            /* Hide details by default */
+            .store_details_column {
+                display: none;
+            }
+       </style>
         <section class="admin__title">
             <h5>Expenses List</h5>
         </section>
@@ -87,7 +88,6 @@
                                     
                                     $expenseType = $item->expense_id ? DB::table('expences')->where('id', $item->expense_id)->first() : null;
                                     $ExpenseType = $expenseType ? $expenseType->title : "";
-                                    $userDesignationId = auth()->guard('admin')->user()->designation;
                                 @endphp
                                 <tr class="store_details_row">  
                                     <td>{{$key +1 }}</td>
@@ -111,7 +111,7 @@
                                     </td>
                                     
                                     <td>
-                                         @if($item->created_from == 'app' && $item->is_ledger_added == 0 && $userDesignationId == 1)
+                                         @if($item->created_from == 'app' && $item->is_ledger_added == 0 && $canApprove)
                            
                                                 <a href="{{route('admin.accounting.expense.details',$item->id)}}" class="btn btn-outline-warning select-md">
                                                     Approve
@@ -188,6 +188,20 @@
                                                     @if($ExpenseType)
                                                     <td><span>Expense: <strong>{{ $ExpenseType }}</strong></span></td> 
                                                     @endif
+                                                    
+                                                     <td>
+                                                        <span>Receipt Copy: </span>
+                                                    
+                                                            @if (!empty($item->expense_proof))
+                                                                <a href="{{ asset($item->expense_proof) }}" 
+                                                                   target="_blank" 
+                                                                   class="btn btn-sm btn-outline-success select-md mt-2">
+                                                                    View Receipt
+                                                                </a>
+                                                            @else
+                                                                <span class="text-danger">No File</span>
+                                                            @endif
+                                                    </td>
                                                 </tr>
 
                                                 <tr>
@@ -232,22 +246,23 @@
                 </div>
             </div>
         </div>
-    </div>
-    @push('js')
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script>
-            window.addEventListener('close-import-modal', event => {
-                var importModal = document.getElementById('importModal');
-                var modal = bootstrap.Modal.getInstance(importModal);
-                modal.hide();
-            });
-            $(document).ready(function () {
-                $(".store_details_row").click(function () {
-                    // Toggle visibility of the next .store_details_column row
-                    $(this).next("tr").find(".store_details_column").toggle();
+        @push('js')
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <script>
+                window.addEventListener('close-import-modal', event => {
+                    var importModal = document.getElementById('importModal');
+                    var modal = bootstrap.Modal.getInstance(importModal);
+                    modal.hide();
                 });
-            });
-        </script>
+                $(document).ready(function () {
+                    $(".store_details_row").click(function () {
+                        // Toggle visibility of the next .store_details_column row
+                        $(this).next("tr").find(".store_details_column").toggle();
+                    });
+                });
+            </script>
     
-   @endpush
+        @endpush
+    </div>
+    
     

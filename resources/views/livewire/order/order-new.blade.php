@@ -1191,6 +1191,7 @@
                                                                             <div class="text-danger">{{ $message }}</div>
                                                                             @enderror
                                                                         </div>
+                                                                       
                                                                         @endif
                                                                         <div class="col-md-3">
                                                                             <label><strong>Shoulder Type</strong></label>
@@ -1619,16 +1620,26 @@
                                                                         <input type="text" class="form-control form-control-sm border border-1"
                                                                             wire:model="items.{{ $index }}.client_name_place"
                                                                             wire:keydown.enter.prevent>
-                                                                        {{-- <select class="form-control form-control-sm"
-                                                                            wire:model="items.{{ $index }}.client_name_place">
-                                                                            <option value="" hidden>Select</option>
-                                                                            <option value="On Cuff">On Cuff</option>
-                                                                            <option value="On Pocket">On Pocket</option>
-                                                                            <option value="On Pocket Space">On Pocket Space</option>
-                                                                        </select> --}}
+                                                                       
                                                                         @error("items.$index.client_name_place")
                                                                         <div class="text-danger">{{ $message }}</div>
                                                                         @enderror
+                                                                    </div>
+                                                                    <div class="col-md-3">
+                                                                            <label><strong>Options</strong></label>
+                                                                            <select class="form-control form-control-sm"
+                                                                                wire:model="items.{{ $index }}.client_name_options"
+                                                                                wire:change="validateSingle('items.{{ $index }}.client_name_options')">
+                                                                                <option value="" hidden>Select</option>
+                                                                                <option value="Cuffs">Cuffs</option>
+                                                                                <option value="Pocket">Pocket</option>
+                                                                                <option value="Pocket Space">Pocket Space</option>
+                                                                                <option value="Col">Col</option>
+                                                                            </select>
+                                                                            
+                                                                            @error("items.$index.client_name_options")
+                                                                            <div class="text-danger">{{ $message }}</div>
+                                                                            @enderror
                                                                     </div>
                                                                     @endif
                                                                 </div>

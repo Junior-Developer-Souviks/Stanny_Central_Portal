@@ -138,8 +138,8 @@
                     {{-- Skip Modal end--}}
                     <div class="row align-items-center mb-3">
                         @php
-                        $auth = Auth::guard('admin')->user();
-                        $priority_level = in_array($auth->designation,[1,4]);
+                            $auth = Auth::guard('admin')->user();
+                            $priority_level = in_array($auth->designation,[1,4]);
                         @endphp
                         {{-- <div class="col-md-4 {{ $auth->is_super_admin==1 ? "" : " d-none" }}"> --}}
                             <div class="col-md-4">
@@ -513,6 +513,12 @@
                         <div class="row">
                             <div class="col-12 col-md-12 mb-2 mb-md-0">
                                 <h6 class="badge bg-danger custom_danger_badge">Product Information</h6>
+                                {{--Auto Save Code--}}
+                             {{--   <button type="button" class="btn btn-info btn-sm" wire:click="manualSaveDraft">
+                                 <i class="fas fa-save"></i> Save Draft Now
+                                </button> --}}
+                                
+                                {{--Auto Save Code End--}}
                             </div>
                         </div>
                         @if ($errors->has('items'))
@@ -558,7 +564,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label"><strong>Date of Birth</strong></label>
-                                <input type="text" class="form-control form-control-sm" value="{{ $dob }}" readonly>
+                                <input type="date" class="form-control form-control-sm" value="{{ $dob }}" readonly>
                             </div>
                             
                         
@@ -617,12 +623,18 @@
                                         <div class="mt-3">
                                             <p class="small mb-2 text-bold">Profile Preview:</p>
                         
-                                            @foreach ($customer_image as $image)
-                                                <img 
-                                                    src="{{ $image->temporaryUrl() }}"
-                                                    style="width: 100px; height: 100px; object-fit: cover;"
-                                                    class="img-thumbnail shadow-sm me-2 mb-2"
-                                                >
+                                           @foreach ((is_array($customer_image) ? $customer_image : [$customer_image]) as $image)
+                                                @if (is_object($image) && method_exists($image, 'temporaryUrl'))
+                                                    <!-- Live Uploaded File -->
+                                                    <img src="{{ $image->temporaryUrl() }}"
+                                                         style="width: 100px; height: 100px; object-fit: cover;"
+                                                         class="img-thumbnail shadow-sm me-2 mb-2">
+                                                @elseif (is_string($image))
+                                                    <!-- Restored from Draft (URL) -->
+                                                    <img src="{{ $image }}"
+                                                         style="width: 100px; height: 100px; object-fit: cover;"
+                                                         class="img-thumbnail shadow-sm me-2 mb-2">
+                                                @endif
                                             @endforeach
                                         </div>
                                     @endif
@@ -642,8 +654,8 @@
                         
                                 <input 
                                     type="file" 
-                                    wire:model="physical_bill_book" 
-                                    id="physical_bill_book"
+                                    wire:model="physical_bill_book" multiple
+                                    id="physical_bill_book" 
                                     class="form-control border border-2 p-2 form-control-sm @error('physical_bill_book') border-danger @enderror"
                                 >
                         
@@ -652,6 +664,48 @@
                                         {{ $message }}
                                     </div>
                                 @enderror
+                                
+                                <!-- Preview -->
+                                @if ($physical_bill_book)
+
+                                    @php
+                                        $file = is_array($physical_bill_book)
+                                            ? ($physical_bill_book[0] ?? null)
+                                            : $physical_bill_book;
+                                    @endphp
+                                
+                                    @if ($file)
+                                
+                                        <div class="mt-3">
+                                            <p class="small mb-2 text-bold">Bill Book Preview:</p>
+                                
+                                            @if (is_object($file) && method_exists($file, 'temporaryUrl'))
+                                
+                                                @if (str_starts_with($file->getMimeType(), 'image/'))
+                                                    <img src="{{ $file->temporaryUrl() }}"
+                                                         style="max-width:100px;max-height:100px;object-fit:cover;"
+                                                         class="img-thumbnail shadow-sm">
+                                                @else
+                                                   <a href="{{ $file->temporaryUrl() }}" 
+                                                       target="_blank" 
+                                                       rel="noopener noreferrer"
+                                                       class="btn btn-primary btn-sm">
+                                                       View Bill Book
+                                                    </a>
+                                                @endif
+                                
+                                            @elseif (is_string($file))
+                                        
+                                                <img src="{{ $file }}"
+                                                     style="max-width:200px;max-height:200px;object-fit:cover;"
+                                                     class="img-thumbnail shadow-sm">
+                                
+                                            @endif
+                                        </div>
+                                
+                                    @endif
+                                
+                                @endif
                         
                             </div>
                         
@@ -776,17 +830,34 @@
                                     <div class="text-danger error-message">{{ $message }}</div>
                                     @enderror
 
-                                    @if(!empty($items[$index]['searchResults']))
+                                  {{--  @if(!empty($items[$index]['searchResults']))
                                     <div class="dropdown-menu show w-100"
                                         style="max-height: 187px; max-width: 100px; overflow-y: auto;">
                                         @foreach ($items[$index]['searchResults'] as $fabric)
                                         <button class="dropdown-item fabric_dropdown_item" type="button"
-                                            wire:click="selectFabric({{ $fabric->id }}, {{ $index }})">
-                                            {{ $fabric->title }}({{$fabric->available_stock}} m)
+                                            wire:click="selectFabric({{ $fabric['id'] }}, {{ $index }})">
+                                            {{ $fabric['title'] }}({{$fabric['available_stock']}} m)
                                         </button>
                                         @endforeach
                                     </div>
-                                    @endif
+                                    @endif --}}
+                                    {{-- Fabric Search Results --}}
+                                        @if(!empty($items[$index]['searchResults']))
+                                        <div class="dropdown-menu show w-100" 
+                                             style="max-height: 187px; overflow-y: auto; z-index: 1050;">
+                                            @foreach ($items[$index]['searchResults'] as $fabric)
+                                                @php
+                                                    $fabricId = is_array($fabric) ? ($fabric['id'] ?? '') : ($fabric->id ?? '');
+                                                    $title    = is_array($fabric) ? ($fabric['title'] ?? '') : ($fabric->title ?? '');
+                                                    $stock    = is_array($fabric) ? ($fabric['available_stock'] ?? 0) : ($fabric->available_stock ?? 0);
+                                                @endphp
+                                                <button class="dropdown-item fabric_dropdown_item" type="button"
+                                                    wire:click="selectFabric({{ $fabricId }}, {{ $index }})">
+                                                    {{ $title }} ({{ $stock }} m)
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                        @endif
                                 </div>
                                
                                 {{-- Price --}}
@@ -1580,8 +1651,15 @@
                                                     <div class="d-flex flex-wrap gap-2">
                                                         @foreach ($imageUploads[$index] as $imgIndex => $img)
                                                         <div style="position: relative; width: 70px;">
+                                                            @if (is_object($img) && method_exists($img, 'temporaryUrl'))
                                                             <img src="{{ $img->temporaryUrl() }}" class="img-thumbnail"
                                                                 style="width: 100%;" />
+                                                                @elseif (is_string($img))
+                                                                <!-- Restored from Draft (URL string) -->
+                                                                <img src="{{ $img }}" 
+                                                                     class="img-thumbnail" 
+                                                                     style="width: 100%; height: 70px; object-fit: cover;" />
+                                                            @endif
                                                             <button type="button"
                                                                 class="btn btn-sm btn-danger rounded-circle p-1 position-absolute top-0 end-0"
                                                                 style="width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center;"
@@ -1619,11 +1697,17 @@
                                                     <div class="d-flex flex-wrap gap-2">
                                                         @foreach ($voiceUploads[$index] as $voiceIndex => $voice)
                                                         <div style="width: 150px; position: relative;">
+                                                            @if (is_object($voice) && method_exists($voice, 'temporaryUrl'))
                                                             <audio controls style="width: 100%;">
                                                                 <source src="{{ $voice->temporaryUrl() }}"
                                                                     type="audio/mpeg">
                                                                 Your browser does not support the audio element.
                                                             </audio>
+                                                            @elseif (is_string($voice))
+                                                            <audio controls style="width: 100%;">
+                                                                    <source src="{{ $voice }}" type="audio/mpeg">
+                                                                </audio>
+                                                            @endif
                                                             <button type="button"
                                                                 class="btn btn-sm btn-danger rounded-circle p-1 position-absolute top-0 end-0"
                                                                 style="width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center;"
@@ -1856,7 +1940,86 @@
 </div>
 @push('js')
 
+<!--Auto Save Code-->
+   
+<script>
+   // Auto Save Code
+    let autoSaveInterval = null;
+    let isLoggingOut = false;
+    
+    // function startAutoSave() {
+    //     if (autoSaveInterval) clearInterval(autoSaveInterval);
+    
+    //     autoSaveInterval = setInterval(() => {
+    //         if (document.visibilityState === 'visible' && !isLoggingOut) {
+    //             // Check if Livewire component is still alive before saving
+    //             try {
+    //                 if (window.Livewire && @this) {
+    //                     @this.saveDraft().catch(() => {
+    //                         // Silently fail - session may have expired
+    //                         clearInterval(autoSaveInterval);
+    //                     });
+    //                 }
+    //             } catch(e) {
+    //                 clearInterval(autoSaveInterval);
+    //             }
+    //         }
+    //     }, 30000); // increase to 30 seconds to reduce server load
+    // }
+    function startAutoSave() {
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
 
+        autoSaveInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                @this.saveDraft();
+            }
+        }, 500);
+    }
+    
+    window.addEventListener('start-auto-save', startAutoSave);
+    
+    // CRITICAL FIX: Detect logout clicks and stop auto-save
+    document.addEventListener('click', function(e) {
+        const target = e.target.closest('a[href*="logout"], form[action*="logout"] button, button[onclick*="logout"]');
+        if (target) {
+            isLoggingOut = true;
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+        }
+    });
+    
+    // Also intercept any form submission that looks like logout
+    document.addEventListener('submit', function(e) {
+        if (e.target.action && e.target.action.includes('logout')) {
+            isLoggingOut = true;
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+        }
+    });
+    
+    window.addEventListener('beforeunload', () => {
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
+        // Do NOT fire saveDraft on beforeunload - it blocks navigation and breaks logout
+    });
+    
+    window.addEventListener('unload', () => {
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
+    });
+    
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+        } else if (document.visibilityState === 'visible' && !isLoggingOut) {
+            startAutoSave();
+        }
+    });
+    
+    // Handle Livewire page expiry gracefully
+    window.addEventListener('livewire:failed', () => {
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
+        isLoggingOut = true; // stop all further saves
+    });
+    // Auto Save Code End
+</script>
+<!--Auto Save Code End -->
 <script>
     const mediaRecorders = {};
     const audioChunksMap = {};
@@ -2060,14 +2223,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     let countryCode = window.preferredMap[dialCode]; // e.g. "in"
                         // console.log("Updating:", countryCode, dialCode);
                     if (countryCode) {
-                        // âœ… Update flag inside .selected-flag
+                        // Update flag inside .selected-flag
                         $(`${parentId} .selected-flag .iti-flag`)
                             .attr("class", `iti-flag ${countryCode}`);
 
-                        // âœ… Update dial code inside .selected-flag
+                        // Update dial code inside .selected-flag
                         $(`${parentId} .selected-flag .selected-dial-code`).text(dialCode);
 
-                        // âœ… Optionally set value to input
+                        // Optionally set value to input
                         $(`${itemId}`).val(number);
                     }
                 }

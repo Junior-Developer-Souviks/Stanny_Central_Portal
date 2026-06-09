@@ -104,8 +104,8 @@ class DayCashEntry extends Component
                     'payment_digital' => 0,
                 ]);
 
-                $this->createDebitRecords();
-
+               $payment = $this->createDebitRecords();
+               
                 $ledgerData = [
                     'staff_id' => $this->staff_id,
                     'amount'   => $this->collectedAmount,
@@ -114,6 +114,8 @@ class DayCashEntry extends Component
                     'bank_cash'=> 'wallet',
                     'voucher_no'=> 'EXPENSE'.time(),
                     'purpose_description' => 'Given amount recorded',
+                     'payment_id' => $payment ? $payment->id : "",
+                     'transaction_id' => $payment ? $payment->voucher_no : "",
                 ];
                 $this->createLedgerRecord($ledgerData);
                 
@@ -197,92 +199,7 @@ class DayCashEntry extends Component
         }
     }
 
-    // Old
-    // public function submit()
-    // {
-    //     // dd($this->all());
-    //     // Validation rules
-    //     // $this->validate([
-    //     //     'staff_id' => 'required|exists:users,id',
-    //     //     'totalWallet' => 'required',
-    //     //     'entry_type' => 'required',
-    //     //     'payment_cash' => 'required_without:payment_digital|boolean',
-    //     //     'payment_digital' => 'required_without:payment_cash|boolean',
-    //     //     'cashCollectedAmount' => 'required_if:payment_cash,true|nullable|numeric',
-    //     //     'digitalCollectedAmount' => 'required_if:payment_digital,true|nullable|numeric',
-    //     //     'collectedAmount' => 'required_if:entry_type,given|numeric'
-    //     // ], [
-    //     //     'payment_cash.required_without' => 'Please select at least one payment type',
-    //     //     'payment_digital.required_without' => 'Please select at least one payment type',
-    //     // ]);
-
-    //     // Check if at least one payment type is selected
-    //     if (!$this->payment_cash && !$this->payment_digital) {
-    //         $this->addError('payment_type', 'Please select at least one payment type.');
-    //         return;
-    //     }
-
-    //     // Check if amounts are provided for selected types
-    //     $cashAmount = $this->cashCollectedAmount ?? 0;
-    //     $digitalAmount = $this->digitalCollectedAmount ?? 0;
-    //     $totalAmount = $cashAmount + $digitalAmount;
-        
-    //     if ($totalAmount <= 0) {
-    //         $this->addError('amount', 'Please enter a valid amount for at least one payment type.');
-    //         return;
-    //     }
-
-    //     // Type-specific validation
-    //     if ($this->entry_type === 'collect') {
-    //         if ($this->payment_cash && $cashAmount > $this->totalCash) {
-    //             $this->addError('cashCollectedAmount', 'Cash amount exceeds available cash.');
-    //             return;
-    //         }
-            
-    //         if ($this->payment_digital && $digitalAmount > $this->totalDigital) {
-    //             $this->addError('digitalCollectedAmount', 'Digital amount exceeds available digital payments.');
-    //             return;
-    //         }
-    //     }
-
-    //     try {
-    //         DB::beginTransaction();
-
-    //         // Create day cash entry
-    //         $entry = DayCashEntryModel::create([
-    //             'staff_id'        => $this->staff_id,
-    //             'type'            => $this->entry_type,
-    //             'payment_date'    => now()->toDateString(),
-    //             'amount'          => $totalAmount,
-    //             'payment_cash'    => $cashAmount,
-    //             'payment_digital' => $digitalAmount,
-    //         ]);
-
-    //         // Handle collection
-    //         if ($this->entry_type === 'collect') {
-    //             $this->settleCollections($cashAmount, $digitalAmount);
-    //         } 
-    //         // Handle given
-    //         else {
-    //             $this->createDebitRecords();
-    //         }
-
-    //         DB::commit();
-
-    //         // Reset form
-    //         $this->reset([
-    //             'cashCollectedAmount', 'digitalCollectedAmount', 
-    //             'payment_cash', 'payment_digital','collectedAmount',
-    //             'totalCash', 'totalNEFT', 'totalCheque', 'totalDigital'
-    //         ]);
-            
-    //         session()->flash('success', 'Day cash entry submitted successfully!');
-    //     } catch (\Exception $e) {
-    //         dd($e->getMessage());
-    //         DB::rollBack();
-    //         session()->flash('error', 'Error: ' . $e->getMessage());
-    //     }
-    // }
+   
 
     private function settleCollections($cashAmount, $digitalAmount)
     {
@@ -309,35 +226,7 @@ class DayCashEntry extends Component
 
     }
 
-    // private function settlePaymentType($type, $amount)
-    // {
-    //     $collections = PaymentCollection::where('user_id', $this->staff_id)
-    //         ->where('is_approve', 1)
-    //         ->where('is_settled', 0)
-    //         ->where('payment_type', $type)
-    //         ->orderBy('id')
-    //         ->get();
-
-    //     $remaining = $amount;
-
-    //     foreach ($collections as $collection) {
-    //         if ($remaining <= 0) break;
-
-    //         if ($remaining >= $collection->collection_amount) {
-    //             $remaining -= $collection->collection_amount;
-    //             $collection->update([
-    //                 'collection_amount' => 0,
-    //                 'is_settled' => 1,
-    //             ]);
-    //         } else {
-    //             $collection->update([
-    //                 'collection_amount' => $collection->collection_amount - $remaining,
-    //                 'is_settled' => 0,
-    //             ]);
-    //             $remaining = 0;
-    //         }
-    //     }
-    // }
+   
 
     private function createLedgerRecord($data)
 {
@@ -355,7 +244,7 @@ class DayCashEntry extends Component
 
 
     Ledger::create([
-        'id'                         => null, // auto increment
+        // 'id'                         => null, // auto increment
         'user_type'                  => $userType,
         'staff_id'                   => $data['staff_id'] ?? null,
         'customer_id'                => $data['customer_id'] ?? null,
@@ -460,23 +349,38 @@ class DayCashEntry extends Component
         $timestamp = time();
 
         if ($amount > 0) {
-            Payment::create([
+           $payment =  Payment::create([
                 'payment_for' => 'debit',
                 'stuff_id'    => $this->staff_id,
                 'amount'      => $amount,
                 'payment_in'  => 'cash', // Or maybe make this dynamic if needed
                 'voucher_no'  => 'EXPENSE' . $timestamp,
                 'payment_date'=> now(),
+                'payment_mode' => 'Cash',
+                'created_from' => 'web',
+                'is_ledger_added'=> 1,
+                'is_approved' => 1,
+                'approved_by' => auth('admin')->id(),
+                'created_by' => auth('admin')->id()
+                
             ]);
+            // dd($payment);
 
             // Create journal entry
             Journal::create([
-                'payment_id'        => null,
+                'payment_id'        =>  $payment->id,
                 'is_debit'           => 1,
                 'transaction_amount' => $amount,
                 'created_at'         => now(),
+                'purpose'            => 'day_cash_entry',
+                'purpose_description' => 'given',
+                'purpose_id'         => $payment->voucher_no,
+                'entry_date'         => $payment->payment_date
             ]);
+            
+            return $payment;
         }
+        return null;
     }
 
 
