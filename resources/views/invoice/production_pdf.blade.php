@@ -247,6 +247,7 @@
                                     'Trouser Position'      => $item['trouser_position']       ?? null,
                                     'Client Name Required'  => $item['client_name_required']   ?? null,
                                     'Client Name'           => $item['client_name_place']      ?? null,
+                                    'Client Name Options'   => $item['client_name_options']    ?? null,
                                 ];
 
                                 $extraFiltered = array_filter($extraFields, fn($v) => !empty($v));

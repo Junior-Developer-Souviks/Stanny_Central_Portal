@@ -5,7 +5,23 @@
         }
         .message-icon:hover {
             opacity: 1 !important;
-            color: #007bff; /* Optional: adds a blue color on hover */
+            color: #007bff; 
+        }
+
+        /* Fix for recording buttons */
+        .btn-cta.btn-sm {
+            padding: 6px 12px !important;
+            font-size: 13px !important;
+            min-height: 32px;
+            white-space: nowrap;
+        }
+
+        .visualizer-container {
+            background: rgba(0,0,0,0.75);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #e91e63;
+            margin-left: 8px;
         }
        
         
@@ -1737,28 +1753,34 @@
                                                             onclick="document.getElementById('voice-upload-{{ $index }}').click()">
                                                             <i class="material-icons text-white"
                                                                 style="font-size: 15px;">mic</i>
-                                                            Upload Voice
+                                                           
                                                         </button>
     
                                                         <!-- OR separator -->
                                                         <span class="fw-bold text-muted">OR</span>
     
                                                         <!-- Start / Stop Buttons -->
-                                                        <div class="ms-auto text-end d-flex gap-2">
+                                                        <div class="ms-auto text-end d-flex align-items-center gap-2" wire:ignore>
                                                             <button type="button" class="btn btn-cta btn-sm"
                                                                 onclick="startRecording({{ $index }});"
                                                                 id="startBtn_{{ $index }}">
-                                                                Start Recording
-                                                                <i class="material-icons text-white"
-                                                                    style="font-size: 15px;">record_voice_over</i>
+                                                                 <i class="material-icons text-white" style="font-size:20px;">
+                                                                    play_arrow
+                                                                </i>
+                                                              
                                                             </button>
                                                             <button type="button" class="btn btn-cta btn-sm"
                                                                 onclick="stopRecording({{ $index }});"
                                                                 id="stopBtn_{{ $index }}" disabled>
-                                                                Stop Recording
-                                                                <i class="material-icons text-white"
-                                                                    style="font-size: 15px;">stop_circle</i>
+                                                                <i class="material-icons text-white" style="font-size:20px;">
+                                                                    pause
+                                                                </i>
+                                                              
                                                             </button>
+                                                            <div id="visualizer-container-{{ $index }}" style="display: none; min-width: 160px;">
+                                                                <small class="text-danger fw-bold d-block text-center mb-1">Recording...</small>
+                                                                <div id="volume-visualizer-{{ $index }}"></div>
+                                                            </div>
                                                         </div>
                                                     </div>
     
@@ -2031,72 +2053,164 @@
     // Auto Save Code End
 </script>
 <!--Auto Save Code End -->
+
+
 <script>
-    const mediaRecorders = {};
-    const audioChunksMap = {};
+    let mediaRecorders = {};
+    let audioChunksMap = {};
+    let audioContexts = {};
+    let analysers = {};
+    let animationFrames = {};
 
-    //  Assigns a file to a hidden file input so Livewire can pick it up
     function assignFileToInput(index, file) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-
         const input = document.getElementById(`voice-upload-${index}`);
+        if (!input) return;
+
+        const existingFiles = Array.from(input.files || []);
+        existingFiles.push(file);
+
+        const dt = new DataTransfer();
+        existingFiles.forEach(f => dt.items.add(f));
+
         input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // Trigger Livewire to pick it up
-        const event = new Event('change', { bubbles: true });
-        input.dispatchEvent(event);
-
-        console.log(` File assigned to input #voice-upload-${index}`);
+        console.log(`✅ Voice recording added. Total: ${existingFiles.length} for item ${index}`);
+    }
+    
+    function createVolumeVisualizer(index) {
+        const container = document.getElementById(`volume-visualizer-${index}`);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="volume-bars d-flex align-items-end justify-content-center gap-1" style="height: 60px;">
+                ${Array(12).fill(0).map((_, i) => `
+                    <div class="volume-bar" data-bar="${i}" 
+                         style="width: 6px; height: 8px; background: #0d6efd; border-radius: 4px; transition: height 0.05s ease;">
+                    </div>
+                `).join('')}
+            </div>`;
     }
 
-    // Start recording
     async function startRecording(index) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        const chunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-            chunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            const file = new File([blob], `recording_${index}.webm`, { type: 'audio/webm' });
-
-            assignFileToInput(index, file); //  assign file to Livewire input
-        };
-
-        mediaRecorders[index] = mediaRecorder;
-        audioChunksMap[index] = chunks;
-
-        mediaRecorder.start();
-
-        // Optional UI state
-        document.getElementById(`startBtn_${index}`).disabled = true;
-        document.getElementById(`stopBtn_${index}`).disabled = false;
-    }
-
-    // Stop recording
-    function stopRecording(index) {
+        // Cleanup any existing recorder for this index
         if (mediaRecorders[index]) {
-            mediaRecorders[index].stop();
+            stopRecording(index);
         }
 
-        // Optional UI state
-        document.getElementById(`startBtn_${index}`).disabled = false;
-        document.getElementById(`stopBtn_${index}`).disabled = true;
+        const startBtn = document.getElementById(`startBtn_${index}`);
+        const stopBtn = document.getElementById(`stopBtn_${index}`);
+        const visualizerContainer = document.getElementById(`visualizer-container-${index}`);
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: true, 
+                    noiseSuppression: true,
+                    sampleRate: 44100 
+                } 
+            });
+
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            
+            analyser.fftSize = 32;
+            analyser.minDecibels = -90;
+            analyser.maxDecibels = -10;
+            analyser.smoothingTimeConstant = 0.85;
+
+            source.connect(analyser);
+
+            audioContexts[index] = audioContext;
+            analysers[index] = analyser;
+
+            if (visualizerContainer) {
+                visualizerContainer.style.display = 'block';
+                createVolumeVisualizer(index);
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const chunks = [];
+
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const file = new File([blob], `voice_${index}_${Date.now()}.webm`, { type: 'audio/webm' });
+                
+                assignFileToInput(index, file);
+
+                // Cleanup
+                stream.getTracks().forEach(track => track.stop());
+                if (animationFrames[index]) cancelAnimationFrame(animationFrames[index]);
+                if (visualizerContainer) visualizerContainer.style.display = 'none';
+            };
+
+            mediaRecorder.start();
+
+            mediaRecorders[index] = mediaRecorder;
+            audioChunksMap[index] = chunks;
+
+            startVolumeAnimation(index);
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+        } catch (err) {
+            console.error(err);
+            alert("Microphone access failed. Please allow permission.");
+        }
     }
-    function assignFileToInput(index, file) {
-    const dt = new DataTransfer();
-    dt.items.add(file);
 
-    const input = document.getElementById(`voice-upload-${index}`);
-    input.files = dt.files;
+    function startVolumeAnimation(index) {
+        const analyser = analysers[index];
+        if (!analyser) return;
 
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
+        function animate() {
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
 
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+            const avgVolume = sum / bufferLength;
+
+            const bars = document.querySelectorAll(`#volume-visualizer-${index} .volume-bar`);
+            bars.forEach((bar, i) => {
+                const height = Math.max(8, Math.min(60, (avgVolume / 255) * 60 * (i % 3 + 1)));
+                bar.style.height = `${height}px`;
+            });
+
+            animationFrames[index] = requestAnimationFrame(animate);
+        }
+
+        animate();
+    }
+
+    function stopRecording(index) {
+        const recorder = mediaRecorders[index];
+        const startBtn = document.getElementById(`startBtn_${index}`);
+        const stopBtn = document.getElementById(`stopBtn_${index}`);
+
+        if (recorder && recorder.state !== "inactive") {
+            recorder.stop();
+        }
+
+        if (startBtn) {
+            startBtn.disabled = false;
+        }
+        if (stopBtn) stopBtn.disabled = true;
+
+        // Cleanup
+        if (animationFrames[index]) {
+            cancelAnimationFrame(animationFrames[index]);
+        }
+    }
+
+    // Global cleanup
+    window.addEventListener('beforeunload', () => {
+        Object.keys(mediaRecorders).forEach(index => stopRecording(index));
+    });
 </script>
 <script>
     window.addEventListener('error_message', event => {

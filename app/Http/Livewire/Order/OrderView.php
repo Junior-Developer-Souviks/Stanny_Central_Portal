@@ -126,6 +126,7 @@ class OrderView extends Component
                 'trouser_position'     => $item->trouser_position,   
                 'client_name_required'     => $item->client_name_required,   
                 'client_name_place'     => $item->client_name_place,   
+                'client_name_options'     => $item->client_name_options,   
             ];
         });
 

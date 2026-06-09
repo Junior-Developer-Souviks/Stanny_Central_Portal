@@ -51,7 +51,7 @@ class AdminLogin extends Component
         }
         
         // Regenerate session
-        session()->regenerate();
+        // session()->regenerate();
     
         return redirect()->route('admin.dashboard'); // Middleware will now check authentication
     }

@@ -642,6 +642,8 @@
                                         'N/A' }}</p>
                                     <p><strong>Client Name Place:</strong> {{ $order_item['client_name_place'] ??
                                         'N/A' }}</p>
+                                    <p><strong>Client Name Options:</strong> {{ $order_item['client_name_options'] ??
+                                        'N/A' }}</p>
                                     @endif
                                 </div>
                             </div>

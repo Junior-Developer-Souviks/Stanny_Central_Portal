@@ -30,6 +30,24 @@
             margin-bottom: 15px;
             animation: spin 1s linear infinite;
         }
+
+         /* Fix for recording buttons */
+        .btn-cta.btn-sm {
+            padding: 6px 12px !important;
+            font-size: 13px !important;
+            min-height: 32px;
+            white-space: nowrap;
+        }
+
+        .visualizer-container {
+            background: rgba(0,0,0,0.75);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #e91e63;
+            margin-left: 8px;
+        }
+
+      
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -457,196 +475,105 @@
 
                        @if($hasGarment)
                             
-                            
-                                <!-- Client Image Upload -->
+                               <!-- Client Image Upload -->
                                 <div class="col-md-3">
                                     <label class="form-label"><strong>Client Profile Image</strong> <span class="text-danger">*</span></label>
-                            
+
                                     <input type="file" wire:model="customer_image" multiple  
-                                        class="form-control form-control-sm border border-1 p-2 @error('customer_image') border-danger @enderror" {{ $isDisabled ? 'disabled' : '' }}>
-                            
+                                        class="form-control form-control-sm border border-1 p-2 @error('customer_image') border-danger @enderror" 
+                                        {{ $isDisabled ? 'disabled' : '' }}>
+
                                     <div wire:loading wire:target="customer_image" class="text-info small mt-1">
                                         Uploading image...
                                     </div>
-                            
+
                                     @error('customer_image')
-                                    <div class="text-danger small">{{ $message }}</div>
+                                        <div class="text-danger small">{{ $message }}</div>
                                     @enderror
-                            
+
                                     <div class="mt-2">
                                         <p class="small mb-1 text-bold">Preview</p>
                                         
+                                        {{-- NEW UPLOADS --}}
                                         @if(!empty($customer_image))
-
                                             @foreach($customer_image as $img)
-                                        
                                                 @if(is_string($img))
-                                                    <img src="{{ asset($img) }}" width="60">
+                                                    <img src="{{ asset($img) }}" width="80" class="img-thumbnail shadow-sm me-2">
                                                 @else
-                                                    <img src="{{ $img->temporaryUrl() }}" width="60">
+                                                    <img src="{{ $img->temporaryUrl() }}" width="80" class="img-thumbnail shadow-sm me-2">
                                                 @endif
-                                        
-                                            @endforeach
-                                        
+                                            @endforeach 
                                         @endif
                                     </div>
                                 </div>
                                 @endif
                             
                                
-                                
-                               <!-- Physical Bill Book -->
+                            
+                                <!-- Physical Bill Book -->
                                 <div class="col-md-3">
-                                
                                     <p class="small mb-1 text-bold">Physical Bill Book <span class="text-danger">*</span></p>
-                                
+
                                     <!-- INPUT -->
                                     <div class="mt-2 mb-3">
-                                
                                         <input type="file"
-                                               class="form-control form-control-sm"
-                                               wire:model="physical_order_bill_book_new"
-                                               multiple {{ $isDisabled ? 'disabled' : '' }}>
-                                
+                                            class="form-control form-control-sm"
+                                            wire:model="physical_order_bill_book_new"
+                                            multiple {{ $isDisabled ? 'disabled' : '' }}>
                                     </div>
-                                
+
                                     <!-- LOADING -->
-                                    <div wire:loading wire:target="physical_order_bill_book_new"
-                                         class="text-info small mt-1 mb-2">
-                                
+                                    <div wire:loading wire:target="physical_order_bill_book_new" class="text-info small mt-1 mb-2">
                                         Uploading...
-                                
                                     </div>
-                                
+
                                     <!-- ERROR -->
                                     @error('physical_order_bill_book_new')
-                                
-                                        <span class="text-danger small d-block mb-2">
-                                            {{ $message }}
-                                        </span>
-                                
+                                        <span class="text-danger small d-block mb-2">{{ $message }}</span>
                                     @enderror
-                                
-                                
-                                    <!-- OLD FILES -->
-                                    @if(empty($physical_order_bill_book_new))
-                                
-                                        @if(!empty($physical_order_bill_book))
-                                
-                                            <div class="d-flex flex-wrap gap-2">
-                                
-                                                @foreach($physical_order_bill_book as $bill)
-                                
-                                                    @php
-                                                        $extension = strtolower(pathinfo($bill, PATHINFO_EXTENSION));
-                                                    @endphp
-                                
-                                                    <!-- IMAGE -->
-                                                    @if(in_array($extension, ['jpg', 'jpeg', 'png', 'webp']))
-                                
-                                                        <a href="{{ asset($bill) }}" target="_blank">
-                                
-                                                            <img src="{{ asset($bill) }}"
-                                                                 style="width:60px;height:60px;object-fit:cover;"
-                                                                 class="img-thumbnail shadow-sm" >
-                                
-                                                        </a>
-                                
-                                                    <!-- PDF -->
-                                                    @elseif($extension == 'pdf')
-                                
-                                                        <a href="{{ asset($bill) }}"
-                                                           target="_blank"
-                                                           class="text-decoration-none">
-                                
-                                                            <div style="
-                                                                width:60px;
-                                                                height:60px;
-                                                                border:1px solid #ccc;
-                                                                display:flex;
-                                                                align-items:center;
-                                                                justify-content:center;
-                                                                background:#f8f9fa;
-                                                                font-size:12px;
-                                                                font-weight:bold;
-                                                            "
-                                                            class="shadow-sm">
-                                
-                                                                PDF
-                                
-                                                            </div>
-                                
-                                                        </a>
-                                
-                                                    @endif
-                                
-                                                @endforeach
-                                
-                                            </div>
-                                
-                                        @else
-                                
-                                            <div class="text-muted small">
-                                                No Bill uploaded
-                                            </div>
-                                
-                                        @endif
-                                
-                                    @endif
-                                
-                                
-                                    <!-- NEW FILE PREVIEW -->
-                                    @if(!empty($physical_order_bill_book_new))
-                                
-                                        <div class="d-flex flex-wrap gap-2">
-                                
+
+                                    <!-- EXISTING + NEW FILES PREVIEW -->
+                                    <div class="d-flex flex-wrap gap-2">
+
+                                        {{-- NEW UPLOADS --}}
+                                        @if(!empty($physical_order_bill_book_new))
                                             @foreach($physical_order_bill_book_new as $file)
-                                
-                                                @php
-                                                    $extension = strtolower($file->getClientOriginalExtension());
-                                                @endphp
-                                
-                                                <!-- IMAGE -->
+                                                @php $extension = strtolower($file->getClientOriginalExtension()); @endphp
                                                 @if(in_array($extension, ['jpg', 'jpeg', 'png', 'webp']))
-                                
-                                                    <img src="{{ $file->temporaryUrl() }}"
-                                                         style="width:60px;height:60px;object-fit:cover;"
-                                                         class="img-thumbnail shadow-sm" >
-                                
-                                                <!-- PDF -->
+                                                    <img src="{{ $file->temporaryUrl() }}" style="width:70px;height:70px;object-fit:cover;" class="img-thumbnail shadow-sm">
                                                 @elseif($extension == 'pdf')
-                                
-                                                    <a href="{{ $file->temporaryUrl() }}"
-                                                       target="_blank"
-                                                       class="text-decoration-none" >
-                                
-                                                        <div style="
-                                                            width:60px;
-                                                            height:60px;
-                                                            border:1px solid #ccc;
-                                                            display:flex;
-                                                            align-items:center;
-                                                            justify-content:center;
-                                                            background:#f8f9fa;
-                                                            font-size:12px;
-                                                            font-weight:bold;
-                                                        "
-                                                        class="shadow-sm">
-                                
-                                                            PDF
-                                
-                                                        </div>
-                                
+                                                    <a href="{{ $file->temporaryUrl() }}" target="_blank" class="text-decoration-none">
+                                                        <div class="pdf-preview">PDF</div>
                                                     </a>
-                                
                                                 @endif
-                                
                                             @endforeach
-                                
-                                        </div>
-                                
-                                    @endif
-                                
+                                        @endif
+
+                                        {{-- EXISTING FILES --}}
+                                        @if(empty($physical_order_bill_book_new) && !empty($physical_order_bill_book))
+                                            @foreach($physical_order_bill_book as $bill)
+                                                @php $extension = strtolower(pathinfo($bill, PATHINFO_EXTENSION)); @endphp
+                                                
+                                                @if(in_array($extension, ['jpg', 'jpeg', 'png', 'webp']))
+                                                    <a href="{{ asset($bill) }}" target="_blank">
+                                                        <img src="{{ asset($bill) }}" 
+                                                            style="width:70px;height:70px;object-fit:cover;" 
+                                                            class="img-thumbnail shadow-sm">
+                                                    </a>
+                                                @elseif($extension == 'pdf')
+                                                    <a href="{{ asset($bill) }}" target="_blank" class="text-decoration-none">
+                                                        <div style="width:70px;height:70px;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;background:#f8f9fa;font-size:12px;font-weight:bold;" class="shadow-sm">
+                                                            PDF
+                                                        </div>
+                                                    </a>
+                                                @endif
+                                            @endforeach
+                                        @endif
+
+                                        @if(empty($physical_order_bill_book_new) && empty($physical_order_bill_book))
+                                            <div class="text-muted small">No Bill uploaded</div>
+                                        @endif
+                                    </div>
                                 </div>
                             
                                 <!-- Verified Video -->
@@ -1926,7 +1853,7 @@
                                                         @if($isDisabled) disabled @endif>
                                                         <i class="material-icons text-white"
                                                             style="font-size: 15px;">mic</i>
-                                                        Upload Voice
+                                                        
                                                     </button>
 
                                                     <!-- OR separator -->
@@ -1937,17 +1864,26 @@
                                                         <button type="button" class="btn btn-cta btn-sm"
                                                             onclick="startRecording({{ $index }});"
                                                             id="startBtn_{{ $index }}" @if($isDisabled) disabled @endif>
-                                                            Start Recording
-                                                            <i class="material-icons text-white"
-                                                                style="font-size: 15px;">record_voice_over</i>
+                                                            <i class="material-icons text-white" style="font-size:20px;">
+                                                                    play_arrow
+                                                                </i>
+                                                            {{-- <i class="material-icons text-white"
+                                                                style="font-size: 15px;">record_voice_over</i> --}}
                                                         </button>
                                                         <button type="button" class="btn btn-cta btn-sm"
                                                             onclick="stopRecording({{ $index }});"
                                                             id="stopBtn_{{ $index }}" disabled>
-                                                            Stop Recording
-                                                            <i class="material-icons text-white"
-                                                                style="font-size: 15px;">stop_circle</i>
+                                                            <i class="material-icons text-white" style="font-size:20px;">
+                                                                    pause
+                                                                </i>
+                                                            {{-- <i class="material-icons text-white"
+                                                                style="font-size: 15px;">stop_circle</i> --}}
                                                         </button>
+                                                        <!-- Recording Visualizer -->
+                                                        <div id="visualizer-container-{{ $index }}" style="display: none; min-width: 160px;">
+                                                            <small class="text-danger fw-bold d-block text-center mb-1">Recording...</small>
+                                                                <div id="volume-visualizer-{{ $index }}"></div>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -2154,73 +2090,161 @@
 @push('js')
 
 <script>
-    const mediaRecorders = {};
-    const audioChunksMap = {};
+    let mediaRecorders = {};
+    let audioChunksMap = {};
+    let audioContexts = {};
+    let analysers = {};
+    let animationFrames = {};
 
-    //  Assigns a file to a hidden file input so Livewire can pick it up
     function assignFileToInput(index, file) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-
         const input = document.getElementById(`voice-upload-${index}`);
+        if (!input) return;
+
+        const existingFiles = Array.from(input.files || []);
+        existingFiles.push(file);
+
+        const dt = new DataTransfer();
+        existingFiles.forEach(f => dt.items.add(f));
+
         input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // Trigger Livewire to pick it up
-        const event = new Event('change', { bubbles: true });
-        input.dispatchEvent(event);
-
-        // console.log(`File assigned to input #voice-upload-${index}`);
+        console.log(` Voice recording added. Total: ${existingFiles.length} for item ${index}`);
+    }
+    
+    function createVolumeVisualizer(index) {
+        const container = document.getElementById(`volume-visualizer-${index}`);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="volume-bars d-flex align-items-end justify-content-center gap-1" style="height: 60px;">
+                ${Array(12).fill(0).map((_, i) => `
+                    <div class="volume-bar" data-bar="${i}" 
+                         style="width: 6px; height: 8px; background: #0d6efd; border-radius: 4px; transition: height 0.05s ease;">
+                    </div>
+                `).join('')}
+            </div>`;
     }
 
-    // Start recording
     async function startRecording(index) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        const chunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-            chunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'audio/webm' });
-            const file = new File([blob], `recording_${index}.webm`, { type: 'audio/webm' });
-
-            assignFileToInput(index, file); //  assign file to Livewire input
-        };
-
-        mediaRecorders[index] = mediaRecorder;
-        audioChunksMap[index] = chunks;
-
-        mediaRecorder.start();
-
-        // Optional UI state
-        document.getElementById(`startBtn_${index}`).disabled = true;
-        document.getElementById(`stopBtn_${index}`).disabled = false;
-    }
-
-    // Stop recording
-    function stopRecording(index) {
+        // Cleanup any existing recorder for this index
         if (mediaRecorders[index]) {
-            mediaRecorders[index].stop();
+            stopRecording(index);
         }
 
-        // Optional UI state
-        document.getElementById(`startBtn_${index}`).disabled = false;
-        document.getElementById(`stopBtn_${index}`).disabled = true;
+        const startBtn = document.getElementById(`startBtn_${index}`);
+        const stopBtn = document.getElementById(`stopBtn_${index}`);
+        const visualizerContainer = document.getElementById(`visualizer-container-${index}`);
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                    echoCancellation: true, 
+                    noiseSuppression: true,
+                    sampleRate: 44100 
+                } 
+            });
+
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            
+            analyser.fftSize = 32;
+            analyser.minDecibels = -90;
+            analyser.maxDecibels = -10;
+            analyser.smoothingTimeConstant = 0.85;
+
+            source.connect(analyser);
+
+            audioContexts[index] = audioContext;
+            analysers[index] = analyser;
+
+            if (visualizerContainer) {
+                visualizerContainer.style.display = 'block';
+                createVolumeVisualizer(index);
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const chunks = [];
+
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const file = new File([blob], `voice_${index}_${Date.now()}.webm`, { type: 'audio/webm' });
+                
+                assignFileToInput(index, file);
+
+                // Cleanup
+                stream.getTracks().forEach(track => track.stop());
+                if (animationFrames[index]) cancelAnimationFrame(animationFrames[index]);
+                if (visualizerContainer) visualizerContainer.style.display = 'none';
+            };
+
+            mediaRecorder.start();
+
+            mediaRecorders[index] = mediaRecorder;
+            audioChunksMap[index] = chunks;
+
+            startVolumeAnimation(index);
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+        } catch (err) {
+            console.error(err);
+            alert("Microphone access failed. Please allow permission.");
+        }
     }
-    function assignFileToInput(index, file) {
-    const dt = new DataTransfer();
-    dt.items.add(file);
 
-    const input = document.getElementById(`voice-upload-${index}`);
-    input.files = dt.files;
+    function startVolumeAnimation(index) {
+        const analyser = analysers[index];
+        if (!analyser) return;
 
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-}
+        function animate() {
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
 
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+            const avgVolume = sum / bufferLength;
 
+            const bars = document.querySelectorAll(`#volume-visualizer-${index} .volume-bar`);
+            bars.forEach((bar, i) => {
+                const height = Math.max(8, Math.min(60, (avgVolume / 255) * 60 * (i % 3 + 1)));
+                bar.style.height = `${height}px`;
+            });
 
+            animationFrames[index] = requestAnimationFrame(animate);
+        }
+
+        animate();
+    }
+
+    function stopRecording(index) {
+        const recorder = mediaRecorders[index];
+        const startBtn = document.getElementById(`startBtn_${index}`);
+        const stopBtn = document.getElementById(`stopBtn_${index}`);
+
+        if (recorder && recorder.state !== "inactive") {
+            recorder.stop();
+        }
+
+        if (startBtn) {
+            startBtn.disabled = false;
+        }
+        if (stopBtn) stopBtn.disabled = true;
+
+        // Cleanup
+        if (animationFrames[index]) {
+            cancelAnimationFrame(animationFrames[index]);
+        }
+    }
+
+    // Global cleanup
+    window.addEventListener('beforeunload', () => {
+        Object.keys(mediaRecorders).forEach(index => stopRecording(index));
+    });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/12.1.6/js/intlTelInput.min.js"></script>
